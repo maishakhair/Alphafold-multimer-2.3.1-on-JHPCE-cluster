@@ -1,0 +1,2 @@
+### Do not login into ssh. it should automatically download to users/maishakhairnima
+scp -r mnima@jhpce01.jhsph.edu:/users/mnima/alphafold_EGF/outputs_batch12 .
