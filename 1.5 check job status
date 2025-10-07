@@ -1,0 +1,2 @@
+#check job (change jobID)
+sacct -j 16840743 --format=JobID,Elapsed,MaxRSS,MaxVMSize,ReqMem,State
