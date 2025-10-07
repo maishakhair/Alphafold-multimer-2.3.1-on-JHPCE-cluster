@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# Define paths and parameters
+FASTA_DIR="/users/mnima/alphafold_EGF/fasta_batch1"
+OUT_DIR="/users/mnima/alphafold_EGF/outputs_batch1"
+DATA_DIR="/legacy/alphafold/data"
+DATE="2020-05-14"
+N_CPU=8
+
+# Loop through all FASTA files and run AlphaFold-Multimer
+for fasta in "$FASTA_DIR"/*.fasta; do
+    name=$(basename "$fasta" .fasta)
+    echo "Running prediction for $name"
+    run_alphafold.sh \
+        -d "$DATA_DIR" \
+        -o "$OUT_DIR/${name}_output" \
+        -f "$fasta" \
+        -t "$DATE" \
+        -n "$N_CPU" \
+        -m multimer
+done
