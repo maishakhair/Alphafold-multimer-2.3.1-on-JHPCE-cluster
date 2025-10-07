@@ -1,0 +1,2 @@
+##submit job
+sbatch /users/mnima/alphafold_EGF/batch2.slurm
