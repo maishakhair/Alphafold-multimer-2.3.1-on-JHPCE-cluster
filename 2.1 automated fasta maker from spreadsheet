@@ -1,0 +1,36 @@
+###upload .xlsx files of the following: EGF_TGFa_BTC_forautomation.xlsx and Bb protein files (outerTM, secreted etc). headers are "protein_id" which are usually WP codes and "sequence"
+###nano automatedfastamaker.py
+### code will generate fasta pairs in EGF, TGFa and BTC folders respectively, e.g. WP_XXXXXXX_EGF.fasta
+
+import pandas as pd
+import os
+
+# Navigate to working directory (just show where you need to run)
+# os.chdir("/fastscratch/myscratch/mnima/alphafold/outerTM")
+
+# Read the signal protein Excel file
+signals_df = pd.read_excel('EGF_TGFa_BTC_forautomation.xlsx')
+# Reads columns: protein_id, sequence
+
+# Read the OuterTM protein Excel file
+outerTM_df = pd.read_excel('secreted_surfaceexposed_updatedOct032025.xlsx')
+# Reads columns: protein_id (WP_xxxxx.), sequence
+
+# Convert signals to dict for fast lookup
+signal_proteins = signals_df.set_index('protein_id')['sequence'].to_dict()
+
+# List outer TM proteins as tuples (ID, sequence)
+outer_proteins = outerTM_df[['protein_id', 'sequence']].values.tolist()
+
+for signal_name, signal_seq in signal_proteins.items():
+    # Make a folder for the signal protein
+    os.makedirs(signal_name, exist_ok=True)
+    for outer_id, outer_seq in outer_proteins:
+        # Remove .1 from WP_xxxxx.1 (optional—your example keeps it)
+        fasta_filename = f"{outer_id}_{signal_name}.fasta"
+        fasta_path = os.path.join(signal_name, fasta_filename)
+        with open(fasta_path, 'w') as f:
+            f.write(f">{signal_name}\n{signal_seq}\n")
+            f.write(f">{outer_id}\n{outer_seq}\n")
+
+print("All FASTA files have been generated!")
