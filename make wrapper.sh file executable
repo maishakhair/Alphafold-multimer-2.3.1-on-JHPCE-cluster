@@ -1,0 +1,2 @@
+###make executable
+chmod +x /users/mnima/alphafold_EGF/run_batch1_wrapper.sh
