@@ -1,0 +1,44 @@
+##open nano extract_batch3_to_csv.py
+
+
+import os
+import pickle
+import pandas as pd
+
+# Paths
+base_dir = "/users/mnima/alphafold_EGF"
+output_base = os.path.join(base_dir, "outputs_batch1")
+csv_output_path = os.path.join(base_dir, "alphafold_scores.csv")
+
+# Gather results
+results = []
+
+for entry in os.listdir(output_base):
+    protein_dir = os.path.join(output_base, entry)
+    if os.path.isdir(protein_dir):
+        inner_dirs = os.listdir(protein_dir)
+        for subdir in inner_dirs:
+            result_dir = os.path.join(protein_dir, subdir)
+            if os.path.isdir(result_dir):
+                for file in os.listdir(result_dir):
+                    if file.startswith("result_model") and file.endswith(".pkl"):
+                        model_name = file.replace(".pkl", "")
+                        pkl_path = os.path.join(result_dir, file)
+                        with open(pkl_path, "rb") as f:
+                            data = pickle.load(f)
+                            ptm = data.get("ptm", "N/A")
+                            iptm = data.get("iptm", "N/A")
+                            plddt = data.get("plddt", [])
+                            mean_plddt = float(sum(plddt)) / len(plddt) if len(plddt) > 0 else "N/A"
+                            results.append({
+                                "Protein": entry,
+                                "Model": model_name,
+                                "pTM": ptm,
+                                "ipTM": iptm,
+                                "mean_pLDDT": mean_plddt
+                            })
+
+# Save to CSV
+df = pd.DataFrame(results)
+df.to_csv(csv_output_path, index=False)
+print(f"Saved scores to: {csv_output_path}")
