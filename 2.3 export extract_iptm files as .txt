@@ -1,0 +1,83 @@
+import os
+import pickle
+import numpy as np
+from datetime import datetime
+
+# Input/output directory for your EGF AlphaFold run
+input_dir = "/fastscratch/myscratch/mnima/alphafold/secreted_surfaceexposed/EGF"
+base_dir = "/fastscratch/myscratch/mnima/alphafold/secreted_surfaceexposed/EGF_output"
+
+# Date-and-time for filename
+now = datetime.now()
+datestr = now.strftime("%Y%m%d_%H%M%S")
+output_txt = f"EGF_output_{datestr}.txt"
+
+# Gather expected output folder names from input fasta files
+expected_folders = []
+for fasta_file in os.listdir(input_dir):
+    if fasta_file.endswith(".fasta"):
+        base_name = os.path.splitext(fasta_file)[0]  # e.g., WP_xxxxx_EGF
+        expected_folders.append(base_name + "_output")
+
+# Find which output folders actually exist
+found_folders = [folder for folder in os.listdir(base_dir)
+                 if os.path.isdir(os.path.join(base_dir, folder))]
+missing_folders = sorted(set(expected_folders) - set(found_folders))
+
+with open(output_txt, "w") as out:
+    # Report missing predictions
+    if missing_folders:
+        out.write("=== MISSING PREDICTION OUTPUT FOLDERS ===\n")
+        for folder in missing_folders:
+            fasta_basename = folder.replace('_output', '.fasta')
+            out.write(f"No output for input: {fasta_basename}\n")
+        out.write("\n")
+    else:
+        out.write("All input fasta files have corresponding output folders.\n\n")
+    
+    # Analyze existing outputs as before
+    for output_folder in sorted(found_folders):
+        output_path = os.path.join(base_dir, output_folder)
+        # Subdirectory where results are stored
+        subfolders = os.listdir(output_path) if os.path.isdir(output_path) else []
+        if not subfolders:
+            continue
+
+        subdir = os.path.join(output_path, subfolders[0])
+        out.write(f"\n=== Results for {output_folder} ===\n")
+
+        model_data = []
+
+        for filename in os.listdir(subdir):
+            if filename.startswith("result_model") and filename.endswith(".pkl"):
+                full_path = os.path.join(subdir, filename)
+                try:
+                    with open(full_path, "rb") as f:
+                        result = pickle.load(f)
+                except Exception as e:
+                    out.write(f"Error reading {full_path}: {e}\n")
+                    continue
+
+                iptm = result.get('iptm', 0.0)
+                ptm = result.get('ptm', 0.0)
+                plddt = np.array(result.get('plddt', []))
+                mean_plddt = float(np.mean(plddt)) if plddt.size > 0 else 0.0
+                confidence = iptm * ptm
+                model_data.append((filename, iptm, ptm, mean_plddt, confidence))
+
+        # Sort by ipTM descending
+        model_data.sort(key=lambda x: x[1], reverse=True)
+        for fname, iptm, ptm, plddt, conf in model_data:
+            out.write(f"{fname}: ipTM={iptm:.4f}, pTM={ptm:.4f}, mean pLDDT={plddt:.2f}, confidence={conf:.4f}\n")
+
+        high_conf_models = [m for m in model_data if m[4] > 0.5]
+        if high_conf_models:
+            out.write(f"→ {len(high_conf_models)} model(s) with confidence > 0.5\n")
+        else:
+            out.write("→ No models with confidence > 0.5\n")
+
+        high_iptm_models = [m for m in model_data if m[1] > 0.75]
+        if high_iptm_models:
+            out.write(f"→ {len(high_iptm_models)} model(s) with ipTM > 0.75\n")
+        else:
+            out.write("→ No models with ipTM > 0.75\n")
